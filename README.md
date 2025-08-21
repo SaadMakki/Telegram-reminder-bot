@@ -379,48 +379,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **[Design Patterns](https://refactoring.guru/design-patterns)** - Software design patterns
 - **[Clean Code](https://www.amazon.com/Clean-Code-Handbook-Software-Craftsmanship/dp/0132350882)** - Code quality principles
 
-## 📞 Support
-
-If you encounter any issues or have questions:
-
-1. Check the [documentation](docs/)
-2. Search existing [GitHub Issues](https://github.com/yourusername/telegram-reminder-bot/issues)
-3. Create a new issue with detailed information
-4. Join our [Telegram Support Group](https://t.me/your_support_group) (if available)
-
-## 📈 Roadmap
-
-### Upcoming Features
-- [ ] Multi-language support
-- [ ] Advanced question types (rating scales, text input)
-- [ ] Analytics dashboard
-- [ ] Export functionality for user data
-- [ ] Integration with other messaging platforms
-- [ ] Machine learning for optimal scheduling
-- [ ] Voice message questions
-- [ ] Image-based questions
-
-### Performance Improvements
-- [ ] Database query optimization
-- [ ] Connection pooling
-- [ ] Caching layer
-- [ ] Load balancing support
-
-## 🌟 Acknowledgments
-
-- **[Telegram](https://telegram.org/)** for providing an excellent Bot API
-- **[PostgreSQL Team](https://www.postgresql.org/)** for the robust database system
-- **[Python Community](https://www.python.org/community/)** for the amazing ecosystem
-- **Open Source Contributors** who make projects like this possible
-
-## 📊 Project Statistics
-
-![Language](https://img.shields.io/github/languages/top/SaadMakki/telegram-reminder-bot)
-![Code Size](https://img.shields.io/github/languages/code-size/SaadMakki/telegram-reminder-bot)
-![Issues](https://img.shields.io/github/issues/SaadMakki/telegram-reminder-bot)
-![Stars](https://img.shields.io/github/stars/SaadMakki/telegram-reminder-bot)
-![Forks](https://img.shields.io/github/forks/SaadMakki/telegram-reminder-bot)
-
 ---
 
 ## Author
@@ -428,5 +386,3 @@ If you encounter any issues or have questions:
 Email: saadmakki116@gmail.com
 
 ---
-
-*Built with ❤️ using Python and modern software engineering practices*
