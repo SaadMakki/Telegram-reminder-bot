@@ -116,13 +116,7 @@ graph LR
     U --> D
     D --> C
     
-    style MP fill:#e1f5fe
-    style H fill:#f3e5f5
-    style S fill:#f3e5f5
-    style D fill:#e8f5e8
-    style C fill:#fff3e0
-    style Q fill:#fff3e0
-    style U fill:#fff3e0
+    
 ```
 
 ## Data Flow Diagrams
