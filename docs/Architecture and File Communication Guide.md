@@ -205,14 +205,14 @@ graph TD
     E --> F[Create cursor with DictCursor]
     F --> G[Execute parameterized query]
     G --> H{Fetch required?}
-    H -->|Yes| I[fetchall()]
-    H -->|No| J[commit()]
+    H -->|Yes| I["fetchall()"]
+    H -->|No| J["commit()"]
     I --> K[Return results]
     J --> L[Return None]
     K --> M[Close cursor]
     L --> M
     M --> N{Error occurred?}
-    N -->|Yes| O[rollback()]
+    N -->|Yes| O["rollback()"]
     N -->|No| P[Success]
     O --> Q[Raise exception]
     P --> R[End]
