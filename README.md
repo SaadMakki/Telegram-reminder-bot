@@ -415,11 +415,11 @@ If you encounter any issues or have questions:
 
 ## 📊 Project Statistics
 
-![Language](https://img.shields.io/github/languages/top/yourusername/telegram-reminder-bot)
-![Code Size](https://img.shields.io/github/languages/code-size/yourusername/telegram-reminder-bot)
-![Issues](https://img.shields.io/github/issues/yourusername/telegram-reminder-bot)
-![Stars](https://img.shields.io/github/stars/yourusername/telegram-reminder-bot)
-![Forks](https://img.shields.io/github/forks/yourusername/telegram-reminder-bot)
+![Language](https://img.shields.io/github/languages/top/SaadMakki/telegram-reminder-bot)
+![Code Size](https://img.shields.io/github/languages/code-size/SaadMakki/telegram-reminder-bot)
+![Issues](https://img.shields.io/github/issues/SaadMakki/telegram-reminder-bot)
+![Stars](https://img.shields.io/github/stars/SaadMakki/telegram-reminder-bot)
+![Forks](https://img.shields.io/github/forks/SaadMakki/telegram-reminder-bot)
 
 ---
 
