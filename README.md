@@ -98,6 +98,7 @@ telegram-reminder-bot/
 | **Configuration** | Environment variables and settings | [docs/configuration.md](docs/configuration.md) |
 | **API Reference** | Function and class documentation | [docs/api_reference.md](docs/api_reference.md) |
 | **Variables Reference** | Complete variable and object documentation | [docs/variables_reference.md](docs/variables_reference.md) |
+| **Architecture & File Communication Guide** | Overview of architecture, dependencies, and inter-module communication | [docs/architecture_communication.md](docs/architecture_communication.md) |
 
 ## 🔧 Technology Stack
 
