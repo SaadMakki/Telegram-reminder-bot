@@ -197,7 +197,7 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    A[Application Request] --> B[database.py::execute()]
+    A[Application Request] --> B["database.py::execute()"]
     B --> C{Connection exists?}
     C -->|No| D[Create new connection]
     C -->|Yes| E[Reuse connection]
