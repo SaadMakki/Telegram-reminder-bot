@@ -1,7 +1,7 @@
-from bot.database import db
+from .database import db
 
 def get_question_text(question_id):
-    """Get question text by ID"""
+    """Get the text of a question by its ID."""
     result = db.execute(
         "SELECT text FROM questions WHERE question_id = %s",
         (question_id,),
@@ -10,7 +10,7 @@ def get_question_text(question_id):
     return result[0]['text'] if result else None
 
 def get_question_type(question_id):
-    """Get question type by ID"""
+    """Get the type of a question by its ID."""
     result = db.execute(
         "SELECT type FROM questions WHERE question_id = %s",
         (question_id,),
@@ -19,7 +19,7 @@ def get_question_type(question_id):
     return result[0]['type'] if result else None
 
 def get_question_options(question_id):
-    """Get question options by ID"""
+    """Get the options for a question by its ID."""
     result = db.execute(
         "SELECT options FROM questions WHERE question_id = %s",
         (question_id,),
@@ -28,7 +28,7 @@ def get_question_options(question_id):
     return result[0]['options'] if result else None
 
 def get_group_duration(group_id):
-    """Get group duration in days"""
+    """Get the duration in days for a question group."""
     result = db.execute(
         "SELECT duration_days FROM question_groups WHERE group_id = %s",
         (group_id,),
@@ -37,7 +37,7 @@ def get_group_duration(group_id):
     return result[0]['duration_days'] if result else None
 
 def get_user_group_id(user_id):
-    """Get user's active group ID"""
+    """Get the active group ID for a user."""
     result = db.execute(
         """SELECT user_group_id FROM user_groups 
         WHERE user_id = %s ORDER BY start_date DESC LIMIT 1""",

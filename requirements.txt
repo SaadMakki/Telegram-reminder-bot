@@ -1,4 +1,4 @@
-pyTelegramBotAPI==4.16.1
+pyTelegramBotAPI==4.14.1
 psycopg2-binary==2.9.9
-apscheduler==3.10.4
 python-dotenv==1.0.0
+APScheduler==3.10.4

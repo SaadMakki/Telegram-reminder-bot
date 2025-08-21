@@ -1,19 +1,32 @@
 import psycopg2
 import psycopg2.extras
-import config
+from .config import config
 
 class Database:
+    """Database class to handle PostgreSQL connections and operations."""
+    
     def __init__(self):
+        """Initialize database connection."""
         self.conn = None
         
     def connect(self):
-        """Establish database connection"""
+        """Establish database connection if not already connected."""
         if self.conn is None or self.conn.closed:
-            self.conn = psycopg2.connect(**config.DB_CONFIG())
+            self.conn = psycopg2.connect(**config.DB_CONFIG)
         return self.conn
     
     def execute(self, query, params=None, fetch=False):
-        """Execute SQL query with optional parameters"""
+        """
+        Execute SQL query with optional parameters.
+        
+        Args:
+            query (str): SQL query to execute
+            params (tuple): Query parameters
+            fetch (bool): Whether to fetch results
+            
+        Returns:
+            list: Query results if fetch=True, otherwise None
+        """
         conn = self.connect()
         try:
             with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -26,8 +39,9 @@ class Database:
             raise e
     
     def create_tables(self):
-        """Initialize database tables"""
+        """Initialize database tables if they don't exist."""
         queries = [
+            # Users table
             """
             CREATE TABLE IF NOT EXISTS users (
                 user_id BIGINT PRIMARY KEY,
@@ -36,6 +50,7 @@ class Database:
                 created_at TIMESTAMP DEFAULT NOW()
             )
             """,
+            # Question groups table
             """
             CREATE TABLE IF NOT EXISTS question_groups (
                 group_id SERIAL PRIMARY KEY,
@@ -43,6 +58,7 @@ class Database:
                 duration_days INTEGER NOT NULL
             )
             """,
+            # Questions table
             """
             CREATE TABLE IF NOT EXISTS questions (
                 question_id SERIAL PRIMARY KEY,
@@ -54,6 +70,7 @@ class Database:
                 delay_days INTEGER DEFAULT 0
             )
             """,
+            # User groups table
             """
             CREATE TABLE IF NOT EXISTS user_groups (
                 user_group_id SERIAL PRIMARY KEY,
@@ -62,6 +79,7 @@ class Database:
                 start_date TIMESTAMP NOT NULL
             )
             """,
+            # Scheduled questions table
             """
             CREATE TABLE IF NOT EXISTS scheduled_questions (
                 schedule_id SERIAL PRIMARY KEY,
@@ -72,6 +90,7 @@ class Database:
                 sent_time TIMESTAMP
             )
             """,
+            # User answers table
             """
             CREATE TABLE IF NOT EXISTS user_answers (
                 answer_id SERIAL PRIMARY KEY,
@@ -86,12 +105,12 @@ class Database:
             self.execute(query)
     
     def init_question_data(self):
-        """Initialize default question groups and questions"""
+        """Initialize default question groups and questions."""
         # Insert question groups
         groups = [
-            ("1 айлык", 30),
-            ("2 айлык", 60),
-            ("3 айлык", 90)
+            ("1 month", 30),
+            ("2 months", 60),
+            ("3 months", 90)
         ]
         
         for name, duration in groups:
@@ -102,13 +121,13 @@ class Database:
         
         # Insert sample questions
         questions = [
-            (1, "Сіз бүгін өзіңізді қалай сезінесіз?", "multiple_choice", 
-             ["Өте жақсы", "Жақсы", "Қанағаттанарлық", "Нашар"], 1, 0),
-            (1, "Дәрілерді үзбей қабылдадыңыз ба?", "yes_no", None, 10, 10),
-            (2, "Сіздің жалпы денсаулығыңыз қалай?", "multiple_choice", 
-             ["Өте жақсы", "Жақсы", "Қанағаттанарлық", "Нашар"], 5, 5),
-            (3, "Сіздің энергия деңгейіңіз қалай?", "multiple_choice", 
-             ["Жоғары", "Орташа", "Төмен"], 3, 2)
+            (1, "How are you feeling today?", "multiple_choice", 
+             ["Very good", "Good", "Satisfactory", "Bad"], 1, 0),
+            (1, "Did you take your medication regularly?", "yes_no", None, 10, 10),
+            (2, "How is your overall health?", "multiple_choice", 
+             ["Very good", "Good", "Satisfactory", "Bad"], 5, 5),
+            (3, "How is your energy level?", "multiple_choice", 
+             ["High", "Medium", "Low"], 3, 2)
         ]
         
         for group_id, text, qtype, options, interval, delay in questions:
@@ -118,5 +137,5 @@ class Database:
                 (group_id, text, qtype, options, interval, delay)
             )
 
-# Singleton database instance
+# Create a global database instance
 db = Database()

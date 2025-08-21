@@ -1,256 +1,431 @@
-### Project Overview
----
-This is a medical follow-up bot that sends scheduled questionnaires to patients, collects responses, and sends reminders for unanswered questions. The system is designed to monitor patient recovery progress over time with configurable treatment packages.
+# Telegram Reminder Bot
 
-### Core Components Explained
----
-#### 1. config.py
+A sophisticated Telegram bot that sends scheduled questions and reminders to users based on customizable packages. Built with Python, PostgreSQL, and advanced scheduling capabilities.
 
-**Purpose**: Centralized configuration management  
-**Key Features**:
-- Loads environment variables from `.env` file
-- Provides default values for database settings
-- Creates a singleton configuration object
-- Calculates PostgreSQL connection parameters dynamically
+## 🌟 Features
 
-```python
-# Loads environment variables first
-load_dotenv()
+- **Multi-package Support**: 1-month, 2-month, and 3-month question packages
+- **Intelligent Scheduling**: Automated question delivery based on intervals
+- **Question Types**: Support for multiple choice and yes/no questions
+- **Persistent Storage**: PostgreSQL database for reliable data management
+- **Background Processing**: APScheduler for automated reminders
+- **State Management**: Conversation flow handling for user interactions
+- **Scalable Architecture**: Modular design following SOLID principles
 
-class Config:
-    # Example: BOT_TOKEN = os.getenv("BOT_TOKEN")
-    # Sets default DB_HOST="localhost" if not specified
-    ...
-    
-    @property
-    def DB_CONFIG(self):
-        # Dynamically builds connection parameters
-        return {
-            "dbname": self.DB_NAME,
-            "user": self.DB_USER,
-            ...
-        }
+## 🚀 Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/telegram-reminder-bot.git
+cd telegram-reminder-bot
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your configuration
+
+# Run the bot
+python src/main.py
 ```
 
-#### 2. database.py
-**Purpose**: Database abstraction layer  
-**Key Features**:
-- Manages PostgreSQL connections
-- Creates database schema
-- Seeds initial question data
-- Implements singleton pattern
+## 📊 System Architecture
 
-```python
-class Database:
-    def connect(self):
-        # Reuses existing connection if available
-        if self.conn is None or self.conn.closed:
-            self.conn = psycopg2.connect(**config.DB_CONFIG)
-    
-    def create_tables(self):
-        # Executes multiple CREATE TABLE queries
-        # Uses REFERENCES for foreign keys
-        # Example: user_groups references users(user_id)
-    
-    def init_question_data(self):
-        # Inserts default treatment packages
-        # Adds sample questions with different types
-```
-
-#### 3. handlers.py
-**Purpose**: User interaction management  
-**Workflow**:
-1. `/start` command initiates registration
-2. State machine tracks user progress:
-   - `awaiting_name` → `awaiting_package` → active
-3. Package selection triggers question scheduling
-
-```python
-user_states = {}  # Tracks conversation state
-
-def handle_name(bot, user_id, name):
-    # Saves user to database
-    # Moves to package selection state
-
-def handle_package(bot, user_id, package):
-    # Maps package to group ID
-    # Creates user_group record
-    # Calls schedule_questions()
-    # Sends confirmation message
-```
-
-#### 4. scheduler.py
-**Purpose**: Background task management  
-**Key Jobs**:
-1. Question Sender (runs every 5 minutes):
-   - Finds due questions (scheduled_time <= NOW())
-   - Sends questions with appropriate keyboards
-   - Marks questions as sent
-
-2. Reminder Sender (runs every 24 hours):
-   - Finds unanswered questions (>24h old)
-   - Resends questions as reminders
-
-```python
-def send_scheduled_questions(bot: TeleBot):
-    # JOINs 4 tables to get question details
-    # Uses create_keyboard() for response options
-    # Updates sent status in database
-
-def send_reminders(bot: TeleBot):
-    # Checks for unanswered questions
-    # Resends with "REMINDER:" prefix
-```
-
-#### 5. utils.py
-**Purpose**: Helper functions  
-**Key Functions**:
-- `create_keyboard()`: Generates dynamic reply keyboards
-- `get_package_options()`: Standard package choices
-- `schedule_questions()`: Core scheduling algorithm
-
-```python
-def schedule_questions(user_group_id, group_id):
-    # Gets all questions for the group
-    # Calculates start_date from user_group
-    # Generates series: start_date + delay_days + N * interval_days
-    # Inserts into scheduled_questions table
-```
-
-#### 6. questions.py
-**Purpose**: Question data access  
-**Key Functions**:
-- Getters for question text, type, and options
-- Package duration lookup
-- Active user group identification
-
-```python
-def get_question_text(question_id):
-    # Simple SELECT query
-    return result[0]['text'] if result else None
-```
-
-#### 7. main.py
-**Purpose**: Application entry point  
-**Execution Flow**:
-1. Initialize database (create tables + seed data)
-2. Create bot instance
-3. Setup message handlers
-4. Configure scheduler
-5. Start polling in background thread
-
-```python
-def main():
-    db.create_tables()
-    db.init_question_data()
-    ...
-    # Run bot polling in separate thread
-    threading.Thread(target=bot.infinity_polling).start()
-```
-
-### Component Interactions
-----
 ```mermaid
-graph TD
-    A[main.py] -->|initializes| B[database.py]
-    A -->|starts| C[handlers.py]
-    A -->|configures| D[scheduler.py]
+graph TB
+    A[User] -->|Messages| B[Telegram Bot API]
+    B --> C[Bot Handlers]
+    C --> D[State Machine]
+    C --> E[Database Layer]
+    E --> F[PostgreSQL Database]
+    G[Scheduler] -->|Background Jobs| C
+    G --> H[Question Delivery]
+    H --> B
     
-    C -->|uses| E[utils.py]
-    D -->|uses| F[questions.py]
-    D -->|uses| E
-    F -->|queries| B
+    subgraph "Core Components"
+        C
+        D
+        E
+        G
+    end
     
-    G[Telegram API] <--> C
-    D -->|sends via| G
+    subgraph "External Services"
+        B
+        F
+    end
 ```
 
-### Database Schema Deep Dive
----
-**users Table**:
-- Stores patient information
-- `user_id` as primary key (Telegram chat ID)
-
-**question_groups Table**:
-- Defines treatment packages (1/2/3 months)
-- `duration_days` determines program length
-
-**questions Table**:
-- `type`: "multiple_choice" or "yes_no"
-- `options`: JSON array for multiple choice
-- `delay_days`: First occurrence delay
-- `interval_days`: Repeat interval
-
-**scheduled_questions Table**:
-- `scheduled_time`: Exact delivery time
-- `sent`: Flag for delivery status
-- `sent_time`: Actual delivery timestamp
-
-**user_answers Table**:
-- Links answers to specific scheduled questions
-- Stores timestamped responses
-
-### Scheduling Algorithm
-The core scheduling logic in `schedule_questions()` calculates question dates using:
+## 🏗️ Project Structure
 
 ```
-First Occurrence = start_date + delay_days
-Subsequent Occurrences = First Occurrence + N * interval_days
+telegram-reminder-bot/
+├── src/
+│   ├── bot/
+│   │   ├── __init__.py
+│   │   ├── config.py          # Configuration management
+│   │   ├── database.py        # Database operations
+│   │   ├── handlers.py        # Message handlers
+│   │   ├── scheduler.py       # Background job scheduling
+│   │   ├── questions.py       # Question management
+│   │   └── utils.py           # Utility functions
+│   └── main.py               # Application entry point
+├── tests/
+│   ├── __init__.py
+│   ├── test_database.py      # Database tests
+│   ├── test_handlers.py      # Handler tests
+│   └── test_scheduler.py     # Scheduler tests
+├── docs/
+│   ├── installation.md       # Installation guide
+│   ├── deployment.md         # Deployment instructions
+│   ├── database_schema.md    # Database documentation
+│   ├── configuration.md      # Configuration guide
+│   ├── api_reference.md      # API documentation
+│   └── variables_reference.md # Variable reference
+├── requirements.txt          # Python dependencies
+├── Procfile                 # Heroku deployment
+├── .env.example            # Environment template
+└── README.md               # This file
 ```
 
-For example:
-- Question with delay_days=2, interval_days=7
-- Start date: Jan 1
-- Occurrences: Jan 3, Jan 10, Jan 17, ...
+## 📚 Documentation
 
-### Visual Workflow
----
+| Document | Description | Link |
+|----------|-------------|------|
+| **Installation Guide** | Step-by-step setup instructions for all OS | [docs/installation.md](docs/installation.md) |
+| **Deployment Guide** | Heroku and other platform deployments | [docs/deployment.md](docs/deployment.md) |
+| **Database Schema** | Complete database structure and relationships | [docs/database_schema.md](docs/database_schema.md) |
+| **Configuration** | Environment variables and settings | [docs/configuration.md](docs/configuration.md) |
+| **API Reference** | Function and class documentation | [docs/api_reference.md](docs/api_reference.md) |
+| **Variables Reference** | Complete variable and object documentation | [docs/variables_reference.md](docs/variables_reference.md) |
+
+## 🔧 Technology Stack
+
+### Core Technologies
+- **[Python 3.8+](https://www.python.org/downloads/)** - Main programming language
+- **[PostgreSQL](https://www.postgresql.org/)** - Relational database management
+- **[pyTelegramBotAPI](https://pypi.org/project/pyTelegramBotAPI/)** - Telegram Bot API wrapper
+- **[APScheduler](https://apscheduler.readthedocs.io/)** - Advanced Python Scheduler
+
+### Dependencies
+- **[psycopg2-binary](https://pypi.org/project/psycopg2-binary/)** - PostgreSQL adapter for Python
+- **[python-dotenv](https://pypi.org/project/python-dotenv/)** - Environment variable management
+- **[APScheduler](https://pypi.org/project/APScheduler/)** - Background job scheduling
+
+### Platform Support
+- **[Heroku](https://www.heroku.com/)** - Cloud platform deployment
+- **[Telegram Bot API](https://core.telegram.org/bots/api)** - Bot communication interface
+
+## 🛠️ Installation
+
+### Prerequisites
+- Python 3.8 or higher
+- PostgreSQL database
+- Telegram Bot Token from [@BotFather](https://t.me/BotFather)
+
+### Platform-Specific Instructions
+
+#### Windows
+```powershell
+# Install Python from python.org
+# Install PostgreSQL from postgresql.org
+# Clone and setup
+git clone https://github.com/yourusername/telegram-reminder-bot.git
+cd telegram-reminder-bot
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+#### macOS
+```bash
+# Install dependencies with Homebrew
+brew install python postgresql
+brew services start postgresql
+
+# Clone and setup
+git clone https://github.com/yourusername/telegram-reminder-bot.git
+cd telegram-reminder-bot
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+#### Linux (Ubuntu/Debian)
+```bash
+# Install dependencies
+sudo apt update
+sudo apt install python3 python3-pip python3-venv postgresql postgresql-contrib
+
+# Clone and setup
+git clone https://github.com/yourusername/telegram-reminder-bot.git
+cd telegram-reminder-bot
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+For detailed installation instructions, see [Installation Guide](docs/installation.md).
+
+## ⚙️ Configuration
+
+Create a `.env` file in the project root:
+
+```bash
+# Telegram Bot Configuration
+BOT_TOKEN=your_telegram_bot_token_here
+
+# PostgreSQL Database Configuration
+DB_NAME=telegram_bot
+DB_USER=bot_user
+DB_PASSWORD=your_secure_password
+DB_HOST=localhost
+DB_PORT=5432
+
+# Scheduler Settings
+QUESTION_CHECK_INTERVAL=5    # minutes
+REMINDER_CHECK_INTERVAL=24   # hours
+```
+
+For complete configuration details, see [Configuration Guide](docs/configuration.md).
+
+## 🚀 Deployment
+
+### Heroku Deployment (Recommended)
+
+```bash
+# Install Heroku CLI
+# Login and create app
+heroku login
+heroku create your-bot-name
+
+# Add PostgreSQL addon
+heroku addons:create heroku-postgresql:mini
+
+# Set environment variables
+heroku config:set BOT_TOKEN=your_telegram_bot_token
+
+# Deploy
+git push heroku main
+heroku ps:scale worker=1
+```
+
+### Alternative Platforms
+- **Railway**: Fast deployment with automatic PostgreSQL
+- **DigitalOcean App Platform**: Scalable container deployment
+- **Docker**: Containerized deployment for any platform
+
+For comprehensive deployment instructions with visuals, see [Deployment Guide](docs/deployment.md).
+
+## 🏛️ Architecture & Design Patterns
+
+This bot implements several software engineering principles and patterns:
+
+### Design Patterns Used
+- **Singleton Pattern**: Configuration and database instances
+- **Factory Pattern**: Keyboard and UI component creation
+- **Observer Pattern**: Scheduler event handling
+- **Repository Pattern**: Database abstraction layer
+- **State Machine**: User conversation flow management
+
+### SOLID Principles
+- **Single Responsibility**: Each class has one clear purpose
+- **Open/Closed**: Extensible without modifying existing code
+- **Liskov Substitution**: Proper inheritance hierarchies
+- **Interface Segregation**: Focused, minimal interfaces
+- **Dependency Inversion**: Abstractions over concrete implementations
+
+### Code Quality Features
+- **Type Hints**: Enhanced code readability and IDE support
+- **Comprehensive Testing**: Unit tests for all major components
+- **Error Handling**: Robust exception management
+- **Logging**: Detailed application monitoring
+- **Documentation**: Extensive inline and external documentation
+
+## 🧪 Testing
+
+Run the test suite:
+
+```bash
+# Run all tests
+python -m pytest tests/
+
+# Run specific test file
+python -m pytest tests/test_database.py
+
+# Run with coverage
+python -m pytest --cov=src tests/
+```
+
+### Test Structure
+- **Unit Tests**: Individual component testing
+- **Integration Tests**: Database and API interaction testing
+- **Mock Tests**: External service simulation
+
+## 📊 Database Schema
+
+The bot uses a normalized PostgreSQL database schema with the following main tables:
+
+- **users**: User information and registration data
+- **question_groups**: Package definitions (1-month, 2-month, 3-month)
+- **questions**: Question templates with types and options
+- **user_groups**: User-package associations
+- **scheduled_questions**: Question scheduling and delivery tracking
+- **user_answers**: User response storage
+
+For complete schema documentation, see [Database Schema Guide](docs/database_schema.md).
+
+## 🔄 Bot Workflow
+
 ```mermaid
 sequenceDiagram
     participant User
     participant Bot
-    participant Scheduler
     participant Database
-    
-    User->>Bot: /start
-    Bot->>User: Enter name
-    User->>Bot: John Doe
-    Bot->>Database: Save user
-    Bot->>User: Choose package
-    
-    User->>Bot: 1 month
-    Bot->>Database: Create user_group
+    participant Scheduler
+
+    User->>Bot: /start command
+    Bot->>User: Request name
+    User->>Bot: Provides name
+    Bot->>Database: Store user info
+    Bot->>User: Show package options
+    User->>Bot: Select package
+    Bot->>Database: Create user-group association
     Bot->>Database: Schedule questions
-    
-    Scheduler->>Database: Get due questions
-    Database-->>Scheduler: Question details
-    Scheduler->>User: Send question
-    Scheduler->>Database: Mark as sent
-    
-    alt User answers
-        User->>Bot: Response
-        Bot->>Database: Save answer
-    else No answer in 24h
-        Scheduler->>User: Send reminder
-    end
+    Scheduler->>Database: Check for due questions
+    Scheduler->>Bot: Send due questions
+    Bot->>User: Deliver question
+    User->>Bot: Provide answer
+    Bot->>Database: Store answer
 ```
 
-### Key Design Patterns
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Development Setup
+```bash
+# Clone your fork
+git clone https://github.com/yourusername/telegram-reminder-bot.git
+cd telegram-reminder-bot
+
+# Create development environment
+python -m venv dev-env
+source dev-env/bin/activate  # On Windows: dev-env\Scripts\activate
+
+# Install development dependencies
+pip install -r requirements.txt
+pip install pytest pytest-cov black flake8
+
+# Run tests before committing
+python -m pytest
+black src/
+flake8 src/
+```
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+1. **Bot Token Invalid**
+   ```bash
+   # Verify token format: should be like 123456789:ABCDEFghijklmnopqrstuvwxyz
+   echo $BOT_TOKEN
+   ```
+
+2. **Database Connection Failed**
+   ```bash
+   # Check PostgreSQL service
+   sudo systemctl status postgresql  # Linux
+   brew services list | grep postgres  # macOS
+   ```
+
+3. **Import Errors**
+   ```bash
+   # Ensure virtual environment is activated
+   which python  # Should point to venv/bin/python
+   ```
+
+4. **Heroku Deployment Issues**
+   ```bash
+   # Check logs
+   heroku logs --tail
+   
+   # Verify environment variables
+   heroku config
+   ```
+
+## 🔗 Useful Resources
+
+### Documentation
+- **[Telegram Bot API](https://core.telegram.org/bots/api)** - Official Telegram Bot API documentation
+- **[pyTelegramBotAPI](https://pypi.org/project/pyTelegramBotAPI/)** - Python Telegram Bot API wrapper
+- **[PostgreSQL Docs](https://www.postgresql.org/docs/)** - PostgreSQL database documentation
+- **[APScheduler](https://apscheduler.readthedocs.io/)** - Advanced Python Scheduler documentation
+- **[Heroku Dev Center](https://devcenter.heroku.com/)** - Heroku deployment guides
+
+### Learning Resources
+- **[Python Official Tutorial](https://docs.python.org/3/tutorial/)** - Python programming fundamentals
+- **[SQL Tutorial](https://www.w3schools.com/sql/)** - Database query language
+- **[Design Patterns](https://refactoring.guru/design-patterns)** - Software design patterns
+- **[Clean Code](https://www.amazon.com/Clean-Code-Handbook-Software-Craftsmanship/dp/0132350882)** - Code quality principles
+
+## 📞 Support
+
+If you encounter any issues or have questions:
+
+1. Check the [documentation](docs/)
+2. Search existing [GitHub Issues](https://github.com/yourusername/telegram-reminder-bot/issues)
+3. Create a new issue with detailed information
+4. Join our [Telegram Support Group](https://t.me/your_support_group) (if available)
+
+## 📈 Roadmap
+
+### Upcoming Features
+- [ ] Multi-language support
+- [ ] Advanced question types (rating scales, text input)
+- [ ] Analytics dashboard
+- [ ] Export functionality for user data
+- [ ] Integration with other messaging platforms
+- [ ] Machine learning for optimal scheduling
+- [ ] Voice message questions
+- [ ] Image-based questions
+
+### Performance Improvements
+- [ ] Database query optimization
+- [ ] Connection pooling
+- [ ] Caching layer
+- [ ] Load balancing support
+
+## 🌟 Acknowledgments
+
+- **[Telegram](https://telegram.org/)** for providing an excellent Bot API
+- **[PostgreSQL Team](https://www.postgresql.org/)** for the robust database system
+- **[Python Community](https://www.python.org/community/)** for the amazing ecosystem
+- **Open Source Contributors** who make projects like this possible
+
+## 📊 Project Statistics
+
+![Language](https://img.shields.io/github/languages/top/yourusername/telegram-reminder-bot)
+![Code Size](https://img.shields.io/github/languages/code-size/yourusername/telegram-reminder-bot)
+![Issues](https://img.shields.io/github/issues/yourusername/telegram-reminder-bot)
+![Stars](https://img.shields.io/github/stars/yourusername/telegram-reminder-bot)
+![Forks](https://img.shields.io/github/forks/yourusername/telegram-reminder-bot)
+
 ---
-1. **Singleton Pattern**:
-   - Config instance in config.py
-   - Database instance in database.py
 
-2. **Factory Pattern**:
-   - Keyboard creation based on question type
-
-3. **Observer Pattern**:
-   - Scheduler observes time events
-   - Triggers question sending
-
-4. **State Pattern**:
-   - User state machine in handlers.py
-
-----
-Author: Saad Makki\
+## Author
+**Saad Makki**  
 Email: saadmakki116@gmail.com
+
+---
+
+*Built with ❤️ using Python and modern software engineering practices*

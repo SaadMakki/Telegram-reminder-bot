@@ -1,33 +1,51 @@
 from telebot import TeleBot, types
-from bot.database import db
-from bot.questions import get_user_group_id
-from bot.utils import create_keyboard, get_package_options, schedule_questions
-from bot.config import config
+from .database import db
+from .utils import create_keyboard, get_package_options, schedule_questions
+from .config import config
 import datetime
 
-# User state tracking
+# Dictionary to track user states during conversations
 user_states = {}
 
 def setup_handlers(bot: TeleBot):
+    """Setup all message handlers for the bot."""
+    
     @bot.message_handler(commands=['start'])
     def start_handler(message):
-        """Handle /start command"""
+        """Handle the /start command to begin interaction with user."""
         user_id = message.chat.id
-        bot.send_message(user_id, "Сәлеметсіз бе! Атыңызды енгізіңіз:")
+        bot.send_message(user_id, "Hello! Please enter your name:")
         user_states[user_id] = {"state": "awaiting_name"}
+    
+    @bot.message_handler(commands=['help'])
+    def help_handler(message):
+        """Handle the /help command to provide assistance."""
+        help_text = """
+        Welcome to the Reminder Bot!
+        
+        Available commands:
+        /start - Begin using the bot
+        /help - Show this help message
+        
+        This bot will send you regular questions based on your selected package.
+        Please answer them when they appear to help us track your progress.
+        """
+        bot.send_message(message.chat.id, help_text)
 
     @bot.message_handler(func=lambda message: True)
     def message_handler(message):
-        """Handle all text messages"""
+        """Handle all text messages based on user state."""
         user_id = message.chat.id
         text = message.text.strip()
         
+        # If user is not in state tracking, start conversation
         if user_id not in user_states:
             start_handler(message)
             return
             
         state = user_states[user_id].get("state")
         
+        # Route to appropriate handler based on state
         if state == "awaiting_name":
             handle_name(bot, user_id, text)
         elif state == "awaiting_package":
@@ -36,9 +54,12 @@ def setup_handlers(bot: TeleBot):
             handle_answer(bot, user_id, text)
 
 def handle_name(bot, user_id, name):
-    """Process user's name"""
-    # Save user to database
-    username = f"@{bot.get_chat(user_id).username}" if bot.get_chat(user_id).username else None
+    """Process user's name and save to database."""
+    # Get username if available
+    chat = bot.get_chat(user_id)
+    username = f"@{chat.username}" if chat.username else None
+    
+    # Save or update user in database
     db.execute(
         """INSERT INTO users (user_id, username, full_name, created_at)
         VALUES (%s, %s, %s, %s)
@@ -47,63 +68,69 @@ def handle_name(bot, user_id, name):
         (user_id, username, name, datetime.datetime.now())
     )
     
-    # Move to next state
-    user_states[user_id] = {"state": "awaiting_package"}
+    # Move to package selection state
+    user_states[user_id] = {"state": "awaiting_package", "name": name}
     bot.send_message(
         user_id, 
-        "Курсты таңдаңыз:", 
+        "Please select a package:", 
         reply_markup=get_package_options()
     )
 
 def handle_package(bot, user_id, package):
-    """Process selected package"""
-    valid_packages = ["1 айлык", "2 айлык", "3 айлык"]
+    """Process user's package selection and schedule questions."""
+    valid_packages = ["1 month", "2 months", "3 months"]
     
+    # Validate package selection
     if package not in valid_packages:
         bot.send_message(
             user_id, 
-            "Қате таңдау. Курсты таңдаңыз:", 
+            "Invalid selection. Please choose a package:", 
             reply_markup=get_package_options()
         )
         return
     
-    # Map package to group ID
+    # Map package name to group ID
     package_to_group = {
-        "1 айлык": 1,
-        "2 айлык": 2,
-        "3 айлык": 3
+        "1 month": 1,
+        "2 months": 2,
+        "3 months": 3
     }
     group_id = package_to_group[package]
     
-    # Create user group
+    # Create user group association
     db.execute(
         """INSERT INTO user_groups (user_id, group_id, start_date)
         VALUES (%s, %s, %s)""",
         (user_id, group_id, datetime.datetime.now())
     )
     
-    # Get user_group_id
-    user_group_id = db.execute(
+    # Get the newly created user_group_id
+    result = db.execute(
         """SELECT user_group_id FROM user_groups 
         WHERE user_id = %s ORDER BY start_date DESC LIMIT 1""",
         (user_id,),
         fetch=True
-    )[0]['user_group_id']
+    )
+    user_group_id = result[0]['user_group_id'] if result else None
     
-    # Schedule questions
-    schedule_questions(user_group_id, group_id)
+    # Schedule questions for this user
+    if user_group_id:
+        schedule_questions(user_group_id, group_id)
     
-    # Send confirmation
+    # Send confirmation message
+    user_name = user_states[user_id].get('name', 'user')
     bot.send_message(
         user_id, 
-        f"Сәлем, {user_states[user_id].get('name', 'пайдаланушы')}!\nСіз тіркелген курс: {package}",
+        f"Hello, {user_name}!\nYou have registered for: {package}",
         reply_markup=types.ReplyKeyboardRemove()
     )
+    
+    # Clean up state
     del user_states[user_id]
 
 def handle_answer(bot, user_id, answer):
-    """Process user's answer to a question"""
-    # Find latest pending question
+    """Process user's answer to a question."""
+    # Find the latest pending question for this user
     result = db.execute(
         """SELECT sq.schedule_id, q.type, q.options
         FROM scheduled_questions sq
@@ -122,24 +149,26 @@ def handle_answer(bot, user_id, answer):
     )
     
     if result:
-        schedule_id, qtype, options = result[0]['schedule_id'], result[0]['type'], result[0]['options']
+        schedule_id = result[0]['schedule_id']
+        qtype = result[0]['type']
+        options = result[0]['options']
         
-        # Validate answer
+        # Validate answer based on question type
         valid_answers = []
         if qtype == 'yes_no':
-            valid_answers = ["Иә", "Жоқ"]
+            valid_answers = ["Yes", "No"]
         elif options:
             valid_answers = options
             
         if valid_answers and answer not in valid_answers:
             bot.send_message(
                 user_id, 
-                f"Қате жауап. Төмендегі опциялардың бірін таңдаңыз:",
+                f"Invalid answer. Please choose one of the following options:",
                 reply_markup=create_keyboard(qtype, options)
             )
             return
         
-        # Save answer
+        # Save the valid answer
         db.execute(
             "INSERT INTO user_answers (schedule_id, answer) VALUES (%s, %s)",
             (schedule_id, answer)
@@ -147,8 +176,8 @@ def handle_answer(bot, user_id, answer):
         
         bot.send_message(
             user_id, 
-            "Жауабыңыз сақталды!", 
+            "Your answer has been saved!", 
             reply_markup=types.ReplyKeyboardRemove()
         )
     else:
-        bot.send_message(user_id, "Сізде жауап беруге тиісті сұрақтар жоқ.")
+        bot.send_message(user_id, "You don't have any questions to answer right now.")
