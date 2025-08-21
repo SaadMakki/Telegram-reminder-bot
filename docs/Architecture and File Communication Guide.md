@@ -323,11 +323,7 @@ graph TD
     UTILS --> HAND
     UTILS --> SCHED
     
-    style TB fill:#ffeb3b
-    style PG fill:#ffeb3b
-    style APS fill:#ffeb3b
-    style ENV fill:#ffeb3b
-    style MAIN fill:#4caf50
+    
 ```
 
 ### Circular Dependency Prevention
